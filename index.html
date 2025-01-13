@@ -46,6 +46,7 @@
             <div class="flex gap-2">
               <button
                 class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#f0f3f4] text-[#111518] text-sm font-bold leading-normal tracking-[0.015em]"
+                onclick="openLoginModal()"
               >
                 <span class="truncate">Sign In</span>
               </button>
@@ -242,6 +243,52 @@
         </div>
       </div>
     </div>
+    <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl p-8 w-full max-w-md">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-[#111518]">Inloggen</h2>
+          <button onclick="closeLoginModal()" class="text-[#637888] hover:text-[#111518]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <form onsubmit="handleLogin(event)" class="space-y-4" data-mode="login">
+          <div>
+            <label class="block text-sm font-medium text-[#111518] mb-1">E-mailadres</label>
+            <input type="email" id="email" required 
+                   class="w-full px-4 py-2 border border-[#dce1e5] rounded-xl focus:outline-none focus:border-[#339be6]">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-[#111518] mb-1">Wachtwoord</label>
+            <input type="password" id="password" required 
+                   class="w-full px-4 py-2 border border-[#dce1e5] rounded-xl focus:outline-none focus:border-[#339be6]">
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <label class="flex items-center">
+              <input type="checkbox" class="rounded border-[#dce1e5]">
+              <span class="ml-2 text-sm text-[#637888]">Onthoud mij</span>
+            </label>
+            <a href="#" class="text-sm text-[#339be6] hover:underline">Wachtwoord vergeten?</a>
+          </div>
+          
+          <button type="submit" 
+                  class="w-full bg-[#339be6] text-white rounded-xl py-2 font-bold hover:bg-[#2b82c2] transition-colors">
+            Inloggen
+          </button>
+        </form>
+        
+        <div class="mt-4 text-center">
+          <p class="text-sm text-[#637888]">
+            Nog geen account? 
+            <a href="#" class="text-[#339be6] hover:underline">Registreer hier</a>
+          </p>
+        </div>
+      </div>
+    </div>
     <script>
     const UNSPLASH_ACCESS_KEY = '2RxG5glDxVMcpcDVXFIQjvIYVHmf8nhKNgbL6di6rQE'; // Vervang dit met je eigen Unsplash API key
 
@@ -326,6 +373,221 @@
         fetchCarImages(`${selectedBrand} ${document.getElementById('selected-model').textContent}`);
       }
     }
+
+    function openLoginModal() {
+      document.getElementById('loginModal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        console.log('Login poging starten...');
+        const response = await fetch('http://localhost:3000/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        console.log('Response ontvangen:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (response.ok) {
+          localStorage.setItem('token', data.token);
+          closeLoginModal();
+          updateUIForLoggedInUser();
+          alert('Succesvol ingelogd!');
+        } else {
+          alert(data.error || 'Inloggen mislukt. Controleer je gegevens.');
+        }
+      } catch (error) {
+        console.error('Login error details:', error);
+        alert('Verbindingsfout. Controleer of de server draait op http://localhost:3000');
+      }
+    }
+
+    // Voeg registratie functionaliteit toe
+    function openRegisterModal() {
+      const loginForm = document.querySelector('#loginModal form');
+      const registerButton = document.querySelector('#loginModal .mt-4 a');
+      
+      if (loginForm.dataset.mode === 'register') {
+        // Schakel terug naar login modus
+        loginForm.dataset.mode = 'login';
+        document.querySelector('#loginModal h2').textContent = 'Inloggen';
+        registerButton.textContent = 'Registreer hier';
+        loginForm.onsubmit = handleLogin;
+      } else {
+        // Schakel naar register modus
+        loginForm.dataset.mode = 'register';
+        document.querySelector('#loginModal h2').textContent = 'Registreren';
+        registerButton.textContent = 'Terug naar inloggen';
+        loginForm.onsubmit = handleRegister;
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const username = email.split('@')[0]; // Gebruik email als basis voor username
+      
+      try {
+        const response = await fetch('http://localhost:3000/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password, username })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('Registratie succesvol! U kunt nu inloggen.');
+          openRegisterModal(); // Schakel terug naar login scherm
+        } else {
+          alert(data.error || 'Registratie mislukt');
+        }
+      } catch (error) {
+        console.error('Registratie error:', error);
+        alert('Er is een fout opgetreden bij het registreren');
+      }
+    }
+
+    function updateUIForLoggedInUser() {
+      const signInButton = document.querySelector('button[onclick="openLoginModal()"]');
+      if (signInButton) {
+        signInButton.textContent = 'Uitloggen';
+        signInButton.onclick = handleLogout;
+      }
+      updateUserButton();
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('token');
+      const dropdown = document.getElementById('user-dropdown');
+      if (dropdown) {
+        dropdown.remove();
+      }
+      const signInButton = document.querySelector('button[onclick="handleLogout()"]');
+      if (signInButton) {
+        signInButton.textContent = 'Sign In';
+        signInButton.onclick = openLoginModal;
+      }
+    }
+
+    // Update de registratie link onclick handler
+    document.addEventListener('DOMContentLoaded', function() {
+      const registerLink = document.querySelector('#loginModal .mt-4 a');
+      if (registerLink) {
+        registerLink.onclick = function(e) {
+          e.preventDefault();
+          openRegisterModal();
+        };
+      }
+      
+      // Initialize user button
+      updateUserButton();
+      
+      // Check if user is already logged in
+      const token = localStorage.getItem('token');
+      if (token) {
+        updateUIForLoggedInUser();
+      }
+    });
+
+    // Sluit modal als er buiten wordt geklikt
+    document.getElementById('loginModal').addEventListener('click', function(event) {
+      if (event.target === this) {
+        closeLoginModal();
+      }
+    });
+
+    // Voeg deze functies toe aan je JavaScript
+    async function showUserProfile() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        openLoginModal();
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/api/protected', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          // Toon email in een dropdown menu
+          const userButton = document.querySelector('[data-icon="User"]').parentElement;
+          const existingDropdown = document.getElementById('user-dropdown');
+          
+          if (existingDropdown) {
+            existingDropdown.remove();
+          } else {
+            const dropdown = document.createElement('div');
+            dropdown.id = 'user-dropdown';
+            dropdown.className = 'absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg border border-[#dce1e5] z-50';
+            dropdown.innerHTML = `
+              <div class="py-2 px-4">
+                <p class="text-sm text-[#637888]">Ingelogd als:</p>
+                <p class="text-sm font-medium text-[#111518] truncate">${data.user.email}</p>
+              </div>
+              <hr class="border-[#dce1e5]">
+              <div class="py-1">
+                <button onclick="handleLogout()" 
+                        class="block w-full text-left px-4 py-2 text-sm text-[#111518] hover:bg-[#f0f3f4]">
+                  Uitloggen
+                </button>
+              </div>
+            `;
+            userButton.parentElement.appendChild(dropdown);
+          }
+        } else {
+          // Token is ongeldig, verwijder deze
+          localStorage.removeItem('token');
+          updateUIForLoggedInUser();
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    }
+
+    // Update de HTML van de gebruikersknop
+    function updateUserButton() {
+      const userButton = document.querySelector('[data-icon="User"]').parentElement;
+      userButton.onclick = showUserProfile;
+      userButton.style.position = 'relative'; // Voor correcte dropdown positionering
+    }
+
+    // Voeg event listener toe om dropdown te sluiten bij klik buiten
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('user-dropdown');
+      const userButton = document.querySelector('[data-icon="User"]').parentElement;
+      
+      if (dropdown && !userButton.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.remove();
+      }
+    });
     </script>
   </body>
 </html>
+
+
+
