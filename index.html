@@ -247,7 +247,7 @@
     <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-xl p-8 w-full max-w-md">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold text-[#111518]">Inloggen</h2>
+          <h2 class="text-2xl font-bold text-[#111518]">Sign in</h2>
           <button onclick="closeLoginModal()" class="text-[#637888] hover:text-[#111518]">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -263,7 +263,7 @@
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-[#111518] mb-1">Wachtwoord</label>
+            <label class="block text-sm font-medium text-[#111518] mb-1">Password</label>
             <div class="relative">
               <input type="password" id="password" required 
                      class="w-full px-4 py-2 border border-[#dce1e5] rounded-xl focus:outline-none focus:border-[#339be6]">
@@ -280,23 +280,23 @@
           <div class="flex items-center justify-between">
             <label class="flex items-center">
               <input type="checkbox" class="rounded border-[#dce1e5]">
-              <span class="ml-2 text-sm text-[#637888]">Onthoud mij</span>
+              <span class="ml-2 text-sm text-[#637888]">Remember me</span>
             </label>
             <a href="#" onclick="handleForgotPassword(event)" class="text-sm text-[#339be6] hover:underline">
-              Wachtwoord vergeten?
+              Forgot password?
             </a>
           </div>
           
           <button type="submit" 
                   class="w-full bg-[#339be6] text-white rounded-xl py-2 font-bold hover:bg-[#2b82c2] transition-colors">
-            Inloggen
+            Sign in
           </button>
         </form>
         
         <div class="mt-4 text-center">
           <p class="text-sm text-[#637888]">
-            Nog geen account? 
-            <a href="#" class="text-[#339be6] hover:underline">Registreer hier</a>
+            No account yet? 
+            <a href="#" class="text-[#339be6] hover:underline">Register here</a>
           </p>
         </div>
       </div>
@@ -420,9 +420,9 @@
           updateUIForLoggedInUser();
           
           // Toon succesbericht in het menu
-          showMessage('Succesvol ingelogd!', 'success');
+          showMessage('Successfully logged in!', 'success');
         } else {
-          showMessage(data.error || 'Inloggen mislukt. Controleer je gegevens.', 'error');
+          showMessage(data.error || 'Login failed. Check your details.', 'error');
         }
       } catch (error) {
         console.error('Login error details:', error);
@@ -467,13 +467,13 @@
         // Schakel terug naar login modus
         loginForm.dataset.mode = 'login';
         document.querySelector('#loginModal h2').textContent = 'Inloggen';
-        registerButton.textContent = 'Registreer hier';
+        registerButton.textContent = 'Register here';
         loginForm.onsubmit = handleLogin;
       } else {
         // Schakel naar register modus
         loginForm.dataset.mode = 'register';
         document.querySelector('#loginModal h2').textContent = 'Registreren';
-        registerButton.textContent = 'Terug naar inloggen';
+        registerButton.textContent = 'Back to login';
         loginForm.onsubmit = handleRegister;
       }
     }
@@ -496,14 +496,14 @@
         const data = await response.json();
         
         if (response.ok) {
-          alert('Registratie succesvol! U kunt nu inloggen.');
+          alert('Registration successful! You can now log in.');
           openRegisterModal(); // Schakel terug naar login scherm
         } else {
-          alert(data.error || 'Registratie mislukt');
+          alert(data.error || 'Registration failed');
         }
       } catch (error) {
         console.error('Registratie error:', error);
-        alert('Er is een fout opgetreden bij het registreren');
+        alert('An error occurred while registering');
       }
     }
 
@@ -531,7 +531,7 @@
       }
       
       // Toon uitlog melding met rood kader
-      showMessage('U bent uitgelogd', 'error');
+      showMessage('You are logged out', 'error');
     }
 
     // Update de registratie link onclick handler
@@ -649,7 +649,7 @@
       const email = document.getElementById('email').value;
       
       if (!email) {
-        showMessage('Vul eerst uw email adres in', 'error');
+        showMessage('First enter your email address', 'error');
         return;
       }
       
@@ -665,13 +665,13 @@
         const data = await response.json();
         
         if (response.ok) {
-          showMessage('Er is een email verzonden met instructies om uw wachtwoord te resetten', 'success');
+          showMessage('An email has been sent to you with a link to reset your password', 'success');
         } else {
-          showMessage(data.error || 'Er is een fout opgetreden', 'error');
+          showMessage(data.error || 'An error has occurred', 'error');
         }
       } catch (error) {
         console.error('Volledige error:', error);
-        showMessage('Er is een fout opgetreden bij het aanvragen van de wachtwoord reset', 'error');
+        showMessage('An error occurred while requesting the password reset', 'error');
       }
     }
     </script>
