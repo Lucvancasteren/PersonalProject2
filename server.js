@@ -7,6 +7,9 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const User = require('./models/User');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
 
@@ -15,16 +18,10 @@ app.use(helmet());
 
 // CORS configuratie
 app.use(cors({
-    origin: [
-        'http://localhost:5500',
-        'http://localhost:5501',
-        'http://127.0.0.1:5500',
-        'http://127.0.0.1:5501',
-        'http://localhost:5001',
-        'http://127.0.0.1:5001'
-    ],
+    origin: ['http://127.0.0.1:5501', 'http://localhost:5501'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: true
 }));
 
 // Rate limiting
@@ -35,6 +32,29 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use(express.json());
+app.use(express.static('public'));
+app.use(express.static('./'));
+
+// Voeg deze debug logging toe
+app.use((req, res, next) => {
+    console.log('Requested URL:', req.url);
+    next();
+});
+
+// Expliciete route voor reset-password.html
+app.get('/reset-password.html', (req, res) => {
+    // Probeer eerst in de root directory
+    if (fs.existsSync('./reset-password.html')) {
+        res.sendFile('reset-password.html', { root: './' });
+    } 
+    // Anders probeer in public directory
+    else if (fs.existsSync('./public/reset-password.html')) {
+        res.sendFile('reset-password.html', { root: './public' });
+    } 
+    else {
+        res.status(404).send('Reset password page not found');
+    }
+});
 
 // MongoDB connectie met error handling
 mongoose.connect(process.env.MONGODB_URI, {
@@ -143,8 +163,113 @@ app.get('/api/protected', authenticateToken, (req, res) => {
     res.json({ message: 'Toegang tot beveiligde data', user: req.user });
 });
 
+// Email configuratie
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'lucvancasteren6@gmail.com', // Vervang dit met je Gmail adres
+        pass: 'pvfn zdxo ihgz zqur' // Gebruik een app-specifiek wachtwoord van Google
+    }
+});
+
+// Test de email verbinding bij het opstarten
+transporter.verify(function(error, success) {
+    if (error) {
+        console.log('Probleem met email configuratie:', error);
+    } else {
+        console.log('Server is klaar om emails te versturen');
+    }
+});
+
+// Tijdelijke opslag voor reset tokens (in productie zou je dit in een database opslaan)
+const passwordResetTokens = new Map();
+
+// Route voor wachtwoord reset aanvraag
+app.post('/api/forgot-password', async (req, res) => {
+    console.log('Wachtwoord reset aanvraag ontvangen voor:', req.body.email);
+    
+    const { email } = req.body;
+    
+    if (!email) {
+        return res.status(400).json({ error: 'Email adres is verplicht' });
+    }
+    
+    try {
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        
+        passwordResetTokens.set(resetToken, {
+            email,
+            expires: Date.now() + 3600000
+        });
+        
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password.html?token=${resetToken}`;
+        
+        const mailOptions = {
+            from: 'jouw-email@gmail.com',
+            to: email,
+            subject: 'Wachtwoord reset aanvraag',
+            html: `
+                <h1>Wachtwoord Reset</h1>
+                <p>U heeft een wachtwoord reset aangevraagd. Klik op onderstaande link om uw wachtwoord te resetten:</p>
+                <a href="${resetLink}">Reset mijn wachtwoord</a>
+                <p>Deze link is 1 uur geldig.</p>
+                <p>Als u geen wachtwoord reset heeft aangevraagd, kunt u deze email negeren.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log('Reset email verzonden naar:', email);
+        
+        res.json({ message: 'Reset instructies zijn verzonden naar uw email' });
+    } catch (error) {
+        console.error('Error bij versturen reset email:', error);
+        res.status(500).json({ 
+            error: 'Er is een fout opgetreden bij het versturen van de reset email',
+            details: error.message 
+        });
+    }
+});
+
+// Route voor het verwerken van de wachtwoord reset
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        const resetData = passwordResetTokens.get(token);
+        
+        if (!resetData) {
+            return res.status(400).json({ error: 'Ongeldige of verlopen reset token' });
+        }
+        
+        if (Date.now() > resetData.expires) {
+            passwordResetTokens.delete(token);
+            return res.status(400).json({ error: 'Reset token is verlopen' });
+        }
+        
+        // Hash het nieuwe wachtwoord
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        
+        // Update het wachtwoord in de database
+        await User.findOneAndUpdate(
+            { email: resetData.email },
+            { password: hashedPassword }
+        );
+        
+        // Verwijder de gebruikte token
+        passwordResetTokens.delete(token);
+        
+        res.json({ message: 'Wachtwoord succesvol gewijzigd' });
+    } catch (error) {
+        console.error('Wachtwoord reset error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server draait op poort ${PORT}`);
+    console.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
+    console.log(`MongoDB URI: ${process.env.MONGODB_URI}`);
 });
