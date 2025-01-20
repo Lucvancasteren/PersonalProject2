@@ -30,5 +30,6 @@
     "url": "https://github.com/Lucvancasteren/PersonalProject2/issues"
   },
   "homepage": "https://github.com/Lucvancasteren/PersonalProject2#readme",
-  "description": ""
+  "description": "## 🚗 Projectbeschrijving Een moderne webapplicatie voor een autodealer met gebruikersauthenticatie, wachtwoordherstel en een uitgebreide auto-zoekfunctionaliteit. De applicatie is gebouwd met Node.js, Express en MongoDB voor de backend, en gebruikt Tailwind CSS voor de frontend styling.",
+  "devDependencies": {}
 }
